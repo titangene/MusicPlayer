@@ -37,21 +37,25 @@ public class MainActivity extends AppCompatActivity {
 
     private MediaPlayer mediaPlayer;
     private final String SONGPATH = Environment.getExternalStorageDirectory().getPath() + "/";
+    private String path;
     // 歌曲名稱
-    String[] songName = new String[]
+    private String[] songName = new String[]
             {"Pyramids", "Floaters", "Growler", "Serenity", "Code_Blue",
                     "Cosmos", "Eviction", "Noel", "Laserstart", "Supreme"};
     // 歌曲檔案
-    String[] songFile = new String[]
+    private String[] songFile = new String[]
             {"Pyramids.mp3", "Floaters.mp3", "Growler.mp3", "Serenity.mp3", "Code_Blue.mp3",
                     "Cosmos.mp3", "Eviction.mp3", "Noel.mp3", "Laserstart.mp3", "Supreme.mp3"};
     private int cListItem = 0;  // 目前播放歌曲
 
+    private boolean isMediaPlayerPrepare = false;
+
     // 儲存隨機歌曲順序的清單
-    List<Integer> songListShuffleOrder = new ArrayList<Integer>();
-    List<Integer> songListShuffleOrderTemp = new ArrayList<Integer>();
+    private List<Integer> songListShuffleOrder = new ArrayList<Integer>();
+    // 儲存隨機歌曲順序的清單 (從 1 開始編號)
+    private List<Integer> songListShuffleOrderTemp = new ArrayList<Integer>();
     // 原始歌曲順序的清單
-    List<Integer> songListOriginalOrder = new ArrayList<Integer>();
+    private List<Integer> songListOriginalOrder = new ArrayList<Integer>();
 
     private enum PlayState {none, play, pause}      // 播放狀態
     private PlayState playState = PlayState.none;
@@ -119,6 +123,19 @@ public class MainActivity extends AppCompatActivity {
         imgRepeat.setImageAlpha(80);
 
         mediaPlayer = new MediaPlayer();
+
+        // TODO 改
+        // 做好播放準備
+        try {
+            PreparePlay("");
+        } catch (IOException e) {
+            e.printStackTrace();
+            Toast.makeText(this, "播放失敗", Toast.LENGTH_LONG).show();
+        }
+
+        // Timer.schedule(TimerTask, 延遲毫秒, 每隔幾毫秒重複執行)
+        // 更新 bar, 目前播放時間文字
+        mTimer.schedule(mTimerTask, 0, 300);
 
         ArrayAdapter<String> adaSong =
                 new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, songName);
@@ -192,6 +209,8 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onItemClick(AdapterView<?> adapterView, View view, int posistion, long id) {
             cListItem = posistion;      // 取得點選位置
+            // 點歌單時改成未準備狀態
+            isMediaPlayerPrepare = false;
             playSong_checkShuffle();    // 播放
         }
     };
@@ -248,6 +267,28 @@ public class MainActivity extends AppCompatActivity {
         txtProgress.setText(mtimeStr + ":" + stimeStr);
     }
 
+    // 做好播放準備
+    private void PreparePlay(String path) throws IOException {
+        if (path == "")
+            path = isShuffle ? SONGPATH + songFile[songListShuffleOrder.get(cListItem)] :
+                    SONGPATH + songFile[cListItem];
+
+        mediaPlayer.reset();                // 重製 MediaPlayer
+        mediaPlayer.setDataSource(path);    // 播放歌曲路徑
+        mediaPlayer.prepare();              // 多媒體準備播放
+
+        progressTotal = mediaPlayer.getDuration();  // 取得總播放時間
+        song_progress.setMax(progressTotal);
+        song_progress.setProgress(progressCurrent);
+        mediaPlayer.seekTo(progressCurrent);
+        // 更新總播放時間文字
+        convertSongTime_SetTxt(txtProgressLength, progressTotal);
+        updateSongName("checkRepeat");    // 更新歌名
+
+        isStartPlayMusic = true;
+        isMediaPlayerPrepare = true;
+    }
+
     private void PlayPauseSong() {
         switch (playState) {
             // 未播放狀態 (第一次開啟程式 or 循環播放播完所有歌曲，結束播放) 按按鈕 -> 從第一首開始播放
@@ -275,27 +316,20 @@ public class MainActivity extends AppCompatActivity {
 
     private void playSong(String path) {
         try {
-            mediaPlayer.reset();                // 重製 MediaPlayer
-            mediaPlayer.setDataSource(path);    // 播放歌曲路徑
-            mediaPlayer.prepare();              // 多媒體準備播放
-
-            progressTotal = mediaPlayer.getDuration();  // 取得總播放時間
-            song_progress.setMax(progressTotal);
-            // 更新總播放時間文字
-            convertSongTime_SetTxt(txtProgressLength, progressTotal);
-
-            if (isFirstUseTimer) {  // 第一次使用 Timer
-                // Timer.schedule(TimerTask, 延遲毫秒, 每隔幾毫秒重複執行)
-                mTimer.schedule(mTimerTask, 0, 300);
-                isFirstUseTimer = false;
+            if (!isMediaPlayerPrepare) {
+                PreparePlay(path);
             }
 
-            isStartPlayMusic = true;
+            // TODO 改
+//            if (isFirstUseTimer) {  // 第一次使用 Timer
+//                // Timer.schedule(TimerTask, 延遲毫秒, 每隔幾毫秒重複執行)
+//                mTimer.schedule(mTimerTask, 0, 300);
+//                isFirstUseTimer = false;
+//            }
+
             // TODO 永遠從開始播放
             mediaPlayer.start();    // 開始播放
-            mediaPlayer.seekTo(progressCurrent);
 
-            updateSongName("checkRepeat");    // 更新歌名
             playState = PlayState.play;       // 改變播放狀態
             imgPlayPause.setImageResource(R.drawable.ic_pause);
 
@@ -304,10 +338,13 @@ public class MainActivity extends AppCompatActivity {
                 public void onCompletion(MediaPlayer mediaPlayer) {
                     // 播放完後暫停TimerTask
                     isStartPlayMusic = false;
+                    // 播放完後改成未準備狀態
+                    isMediaPlayerPrepare = false;
                     // 檢查循環播放狀態
                     playFinish_checkRepeat();
                 }
             });
+
         } catch (IOException e) {
             e.printStackTrace();
             Toast.makeText(this, "播放失敗", Toast.LENGTH_LONG).show();
@@ -328,14 +365,21 @@ public class MainActivity extends AppCompatActivity {
             cListItem = 0;
 
         progressCurrent = 0;
+        isMediaPlayerPrepare = false;
 
         // 未播放時按下一首，不會馬上播放，只會切換到下一首等待播放
         if(playState == PlayState.play) {
             playSong_checkShuffle();
         } else {
+            // 做好播放準備
+            try {
+                PreparePlay("");
+            } catch (IOException e) {
+                e.printStackTrace();
+                Toast.makeText(this, "播放失敗", Toast.LENGTH_LONG).show();
+            }
             playState = PlayState.none;
             imgPlayPause.setImageResource(R.drawable.ic_play_arrow);
-            updateSongName("checkRepeat");
         }
     }
 
@@ -345,13 +389,20 @@ public class MainActivity extends AppCompatActivity {
             cListItem = lstMusic.getCount() - 1;    // 若到第一首就移到最後
 
         progressCurrent = 0;
+        isMediaPlayerPrepare = false;
 
         if(playState == PlayState.play) {
             playSong_checkShuffle();
         } else {
+            // 做好播放準備
+            try {
+                PreparePlay("");
+            } catch (IOException e) {
+                e.printStackTrace();
+                Toast.makeText(this, "播放失敗", Toast.LENGTH_LONG).show();
+            }
             playState = PlayState.none;
             imgPlayPause.setImageResource(R.drawable.ic_play_arrow);
-            updateSongName("checkRepeat");
         }
     }
 
