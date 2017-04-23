@@ -78,8 +78,7 @@ public class MainActivity extends AppCompatActivity {
     private String stimeStr;
 
     private Timer mTimer = new Timer();
-    private boolean isStartPlayMusic;    // 是否讓 mTimerTask 開始執行
-    //private boolean isFirstUseTimer = true;     // 第一次啟用產生 Timer
+    private boolean isStartPlayMusic;    // 是否更新播放時間文字、SeekBar
 
     private  static final String log_TAG = "myLog";
 
@@ -327,13 +326,6 @@ public class MainActivity extends AppCompatActivity {
             } else
                 PreparePlay(path);
 
-            // TODO 改
-//            if (isFirstUseTimer) {  // 第一次使用 Timer
-//                // Timer.schedule(TimerTask, 延遲毫秒, 每隔幾毫秒重複執行)
-//                mTimer.schedule(mTimerTask, 0, 300);
-//                isFirstUseTimer = false;
-//            }
-
             // TODO 永遠從開始播放
             mediaPlayer.start();    // 開始播放
             Log.d(log_TAG, "Start：" + songName[getSongOrder_checkShuffle()] + " - " + ConvertSongTime(progressCurrent));
@@ -345,7 +337,7 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onCompletion(MediaPlayer mediaPlayer) {
                     Log.d(log_TAG, "End：" + songName[getSongOrder_checkShuffle()] + " - " + ConvertSongTime(progressCurrent));
-                    // 播放完後暫停TimerTask
+                    // 播放完後暫停更新播放時間文字、SeekBar
                     isStartPlayMusic = false;
                     // 播放完後改成未準備狀態
                     isMediaPlayerPrepare = false;
