@@ -32,7 +32,7 @@ public class MainActivity extends AppCompatActivity {
 
     private TextView txtMnsicOrder, txtMusic, txtProgressCurrent, txtProgressLength;
     private SeekBar song_progress;
-    private ImageButton imgShuffle, imgPrev, imgPlayPause, imgNext, imgRepeat, imgEnd;
+    private ImageButton imgShuffle, imgPrev, imgPlayPause, imgNext, imgRepeat;
     private ListView lstMusic;
 
     private MediaPlayer mediaPlayer;
@@ -95,7 +95,6 @@ public class MainActivity extends AppCompatActivity {
         imgPlayPause = (ImageButton)findViewById(R.id.imgPlayPause);
         imgNext = (ImageButton)findViewById(R.id.imgNext);
         imgRepeat = (ImageButton)findViewById(R.id.imgRepeat);
-        imgEnd = (ImageButton)findViewById(R.id.imgEnd);
         lstMusic = (ListView)findViewById(R.id.lstMusic);
 
         song_progress.setOnSeekBarChangeListener(progressListener);
@@ -104,7 +103,6 @@ public class MainActivity extends AppCompatActivity {
         imgPlayPause.setOnClickListener(btnListener);
         imgNext.setOnClickListener(btnListener);
         imgRepeat.setOnClickListener(btnListener);
-        imgEnd.setOnClickListener(btnListener);
         lstMusic.setOnItemClickListener(lstListener);
 
         for (int i = 0; i < songName.length; i++) {
@@ -196,10 +194,6 @@ public class MainActivity extends AppCompatActivity {
 
                 case R.id.imgRepeat:    // 循環播放
                     repeatSong();
-                    break;
-
-                case R.id.imgEnd:       // 結束
-                    finish();
                     break;
             }
         }
