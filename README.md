@@ -1,4 +1,4 @@
 # MusicPlayer
 
 ## Screenshot
-<img src="https://github.com/titangene/MusicPlayer/blob/master/screenshot/Screenshot_1492847795.png" alt="main" width="300" />
+<img src="https://github.com/titangene/MusicPlayer/blob/master/screenshot/Screenshot_1492917398.png" alt="main" width="300" />
