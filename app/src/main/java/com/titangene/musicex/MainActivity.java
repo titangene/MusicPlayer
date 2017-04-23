@@ -12,6 +12,7 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -78,7 +79,9 @@ public class MainActivity extends AppCompatActivity {
 
     private Timer mTimer = new Timer();
     private boolean isStartPlayMusic;    // 是否讓 mTimerTask 開始執行
-    private boolean isFirstUseTimer = true;     // 第一次啟用產生 Timer
+    //private boolean isFirstUseTimer = true;     // 第一次啟用產生 Timer
+
+    private  static final String log_TAG = "myLog";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -109,7 +112,7 @@ public class MainActivity extends AppCompatActivity {
             // 初始化 隨機播放、原始播放 順序清單
             songListShuffleOrder.add(new Integer(i));
             songListOriginalOrder.add(new Integer(i + 1));
-            // 初始化 隨機撥放 順序清單 (從 1 開始編號)
+            // 初始化 隨機播放 順序清單 (從 1 開始編號)
             songListShuffleOrderTemp.add(new Integer(i + 1));
             // 在歌名前加上順序編號
             songName[i] = (i + 1) + ". " + songName[i];
@@ -120,6 +123,7 @@ public class MainActivity extends AppCompatActivity {
         imgShuffle.setImageAlpha(80);
         imgRepeat.setImageAlpha(80);
 
+        Log.d(log_TAG, "new MediaPlayer()");
         mediaPlayer = new MediaPlayer();
 
         // TODO 改
@@ -128,6 +132,7 @@ public class MainActivity extends AppCompatActivity {
             PreparePlay("");
         } catch (IOException e) {
             e.printStackTrace();
+            Log.d(log_TAG, "First Prepare，IOException");
             Toast.makeText(this, "播放失敗", Toast.LENGTH_LONG).show();
         }
 
@@ -203,6 +208,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onItemClick(AdapterView<?> adapterView, View view, int posistion, long id) {
             cListItem = posistion;      // 取得點選位置
+            Log.d(log_TAG, "OnItemClick：" + songName[((isShuffle ? songListShuffleOrder.get(cListItem) : cListItem) + 1)]);
             // 點歌單時改成未準備狀態
             isMediaPlayerPrepare = false;
             playSong_checkShuffle();    // 播放
@@ -225,6 +231,10 @@ public class MainActivity extends AppCompatActivity {
             isStartPlayMusic = true;
             progressCurrent = song_progress.getProgress();
             mediaPlayer.seekTo(progressCurrent);
+
+            int time = progressCurrent / 1000;
+            // 2位數補一個 0：String.format("%02d", mtime)： 2 --> 02
+            Log.d(log_TAG, "Move to " + String.format("%02d", time / 60) + ":" + String.format("%02d", time % 60));
         }
     };
 
@@ -264,8 +274,7 @@ public class MainActivity extends AppCompatActivity {
     // 做好播放準備
     private void PreparePlay(String path) throws IOException {
         if (path == "")
-            path = isShuffle ? SONGPATH + songFile[songListShuffleOrder.get(cListItem)] :
-                    SONGPATH + songFile[cListItem];
+            path = SONGPATH + songFile[getSongOrder_checkShuffle()];
 
         mediaPlayer.reset();                // 重製 MediaPlayer
         mediaPlayer.setDataSource(path);    // 播放歌曲路徑
@@ -281,6 +290,8 @@ public class MainActivity extends AppCompatActivity {
 
         isStartPlayMusic = true;
         isMediaPlayerPrepare = true;
+
+        Log.d(log_TAG, "Prepare：" + songName[getSongOrder_checkShuffle()]);
     }
 
     private void PlayPauseSong() {
@@ -295,6 +306,7 @@ public class MainActivity extends AppCompatActivity {
             // 播放狀態按按鈕 -> 暫停播放
             case play:
                 mediaPlayer.pause();
+                Log.d(log_TAG, "Pause：" + songName[getSongOrder_checkShuffle()]);
                 playState = PlayState.pause;
                 imgPlayPause.setImageResource(R.drawable.ic_play_arrow);
                 break;
@@ -302,6 +314,7 @@ public class MainActivity extends AppCompatActivity {
             // 暫停狀態按按鈕 -> 繼續播放
             case pause:
                 mediaPlayer.start();    // 開始播放
+                Log.d(log_TAG, "Continue：" + songName[getSongOrder_checkShuffle()]);
                 playState = PlayState.play;
                 imgPlayPause.setImageResource(R.drawable.ic_pause);
                 break;
@@ -312,7 +325,8 @@ public class MainActivity extends AppCompatActivity {
         try {
             if (!isMediaPlayerPrepare) {
                 PreparePlay(path);
-            }
+            } else
+                Log.d(log_TAG, "Prepare OK：" + songName[getSongOrder_checkShuffle()]);
 
             // TODO 改
 //            if (isFirstUseTimer) {  // 第一次使用 Timer
@@ -323,6 +337,7 @@ public class MainActivity extends AppCompatActivity {
 
             // TODO 永遠從開始播放
             mediaPlayer.start();    // 開始播放
+            Log.d(log_TAG, "Start：" + songName[getSongOrder_checkShuffle()]);
 
             playState = PlayState.play;       // 改變播放狀態
             imgPlayPause.setImageResource(R.drawable.ic_pause);
@@ -330,6 +345,7 @@ public class MainActivity extends AppCompatActivity {
             mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                 @Override
                 public void onCompletion(MediaPlayer mediaPlayer) {
+                    Log.d(log_TAG, "End：" + songName[getSongOrder_checkShuffle()]);
                     // 播放完後暫停TimerTask
                     isStartPlayMusic = false;
                     // 播放完後改成未準備狀態
@@ -341,16 +357,9 @@ public class MainActivity extends AppCompatActivity {
 
         } catch (IOException e) {
             e.printStackTrace();
+            Log.d(log_TAG, "Prepare，IOException");
             Toast.makeText(this, "播放失敗", Toast.LENGTH_LONG).show();
         }
-    }
-
-    // 檢查隨機撥放狀態，使用 隨機 or 原始 播放順序
-    private void playSong_checkShuffle() {
-        if (isShuffle)
-            playSong(SONGPATH + songFile[songListShuffleOrder.get(cListItem)]);
-        else
-            playSong(SONGPATH + songFile[cListItem]);
     }
 
     private void nextSong() {
@@ -360,6 +369,7 @@ public class MainActivity extends AppCompatActivity {
 
         progressCurrent = 0;
         isMediaPlayerPrepare = false;
+        Log.d(log_TAG, "Next：" + songName[getSongOrder_checkShuffle()]);
 
         // 未播放時按下一首，不會馬上播放，只會切換到下一首等待播放
         if(playState == PlayState.play) {
@@ -370,6 +380,7 @@ public class MainActivity extends AppCompatActivity {
                 PreparePlay("");
             } catch (IOException e) {
                 e.printStackTrace();
+                Log.d(log_TAG, "Next，IOException");
                 Toast.makeText(this, "播放失敗", Toast.LENGTH_LONG).show();
             }
             playState = PlayState.none;
@@ -384,6 +395,7 @@ public class MainActivity extends AppCompatActivity {
 
         progressCurrent = 0;
         isMediaPlayerPrepare = false;
+        Log.d(log_TAG, "Prev：" + songName[getSongOrder_checkShuffle()]);
 
         if(playState == PlayState.play) {
             playSong_checkShuffle();
@@ -393,6 +405,7 @@ public class MainActivity extends AppCompatActivity {
                 PreparePlay("");
             } catch (IOException e) {
                 e.printStackTrace();
+                Log.d(log_TAG, "Prev，IOException");
                 Toast.makeText(this, "播放失敗", Toast.LENGTH_LONG).show();
             }
             playState = PlayState.none;
@@ -416,6 +429,9 @@ public class MainActivity extends AppCompatActivity {
             }
 
             txtMnsicOrder.setText("隨機順序：" + songListShuffleOrderTemp);
+            Log.d(log_TAG, "Enable Shuffle，Order：" + songListShuffleOrderTemp);
+            Log.d(log_TAG, "Current：" + (getSongOrder_checkShuffle() - 1) +
+                    " <-- " + getSongOrder_checkShuffle() + " --> " + (getSongOrder_checkShuffle() + 1));
 
         } else {
             imgShuffle.setImageAlpha(80);   // 改變 btn icon 透明度
@@ -424,6 +440,9 @@ public class MainActivity extends AppCompatActivity {
             // 且按下一首或上一首時，可以切換至 4 or 6 首，而不是 7 or 9 首
             cListItem = songListShuffleOrder.get(cListItem);
             txtMnsicOrder.setText("原始順序：" + songListOriginalOrder);
+            Log.d(log_TAG, "Disable Shuffle，Order：" + songListOriginalOrder);
+            Log.d(log_TAG, "Current：" + (getSongOrder_checkShuffle() - 1) +
+                    " <-- " + getSongOrder_checkShuffle() + " --> " + (getSongOrder_checkShuffle() + 1));
         }
     }
 
@@ -434,12 +453,14 @@ public class MainActivity extends AppCompatActivity {
                 imgRepeat.setImageAlpha(255);
                 imgRepeat.setImageResource(R.drawable.ic_repeat);
                 updateSongName(" (循環播放)");
+                Log.d(log_TAG, "Enable Repeat All");
                 break;
 
             case repeat:
                 repeatState = RepeatState.repeat_one;
                 imgRepeat.setImageResource(R.drawable.ic_repeat_one);
                 updateSongName(" (單曲播放)");
+                Log.d(log_TAG, "Enable Repeat One");
                 break;
 
             case repeat_one:
@@ -447,6 +468,7 @@ public class MainActivity extends AppCompatActivity {
                 imgRepeat.setImageAlpha(80);    // 改變 btn icon 透明度
                 imgRepeat.setImageResource(R.drawable.ic_repeat);
                 updateSongName("");
+                Log.d(log_TAG, "Disable Repeat");
                 break;
         }
     }
@@ -460,20 +482,32 @@ public class MainActivity extends AppCompatActivity {
                     mediaPlayer.stop();
                     playState = PlayState.none;
                     imgPlayPause.setImageResource(R.drawable.ic_play_arrow);
-                    cListItem = 0;
                     txtMusic.setText("播完所有歌曲，結束播放");
+                    Log.d(log_TAG, "Play Finish All Song, End Play, Prepare：" + songName[getSongOrder_checkShuffle()]);
                 } else
                     nextSong();
                 break;
 
             case repeat:
+                Log.d(log_TAG, "Enable Repeat" + songName[getSongOrder_checkShuffle()]);
                 nextSong();     // 播放完後播下一首
                 break;
 
             case repeat_one:
+                Log.d(log_TAG, "Enable Repeat One" + songName[getSongOrder_checkShuffle()]);
                 playSong_checkShuffle();
                 break;
         }
+    }
+
+    // 檢查隨機播放狀態，使用 隨機 or 原始 播放順序 播放
+    private void playSong_checkShuffle() {
+        playSong(SONGPATH + songFile[getSongOrder_checkShuffle()]);
+    }
+
+    // 檢查隨機播放狀態，取得 隨機 or 原始 播放順序
+    private int getSongOrder_checkShuffle() {
+        return isShuffle ? songListShuffleOrder.get(cListItem) : cListItem;
     }
 
     // 更新歌名
@@ -494,12 +528,7 @@ public class MainActivity extends AppCompatActivity {
                     break;
             }
         }
-
-        if (isShuffle) {
-            txtMusic.setText("歌名：" + songName[songListShuffleOrder.get(cListItem)] + repeatStr);
-        } else {
-            txtMusic.setText("歌名：" + songName[cListItem] + repeatStr);
-        }
+        txtMusic.setText("歌名：" + songName[getSongOrder_checkShuffle()] + repeatStr);
     }
 
     // mediaplayer 生命週期與 activity 生命週期無關，所以關閉 activity 也不會關閉音樂
@@ -509,6 +538,7 @@ public class MainActivity extends AppCompatActivity {
 
         mTimer.cancel();
         mediaPlayer.release();    // 釋放所有 MediaPlayer 的資源，呼叫後物件將完全失效
+        Log.d(log_TAG, "Exit APP");
         super.onDestroy();
     }
 }
