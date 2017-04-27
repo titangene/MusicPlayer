@@ -207,11 +207,12 @@ public class MainActivity extends AppCompatActivity {
     private ListView.OnItemClickListener lstListener = new ListView.OnItemClickListener() {
         @Override
         public void onItemClick(AdapterView<?> adapterView, View view, int posistion, long id) {
-            cListItem = posistion;      // 取得點選位置
-            progressCurrent = 0;
             Log.d(log_TAG, "OnItemClick：" + songName[getSongOrder_checkShuffle()] + " - " + ConvertSongTime(progressCurrent));
-            // 點歌單時改成未準備狀態
-            isMediaPlayerPrepare = false;
+            progressCurrent = 0;
+            if (posistion != cListItem) {
+                cListItem = posistion;          // 取得點選位置
+                isMediaPlayerPrepare = false;   // 點歌單時改成未準備狀態
+            }
             playSong_checkShuffle();    // 播放
         }
     };
@@ -323,6 +324,8 @@ public class MainActivity extends AppCompatActivity {
         try {
             if (isMediaPlayerPrepare) {
                 Log.d(log_TAG, "Prepare OK：" + songName[getSongOrder_checkShuffle()] + " - " + ConvertSongTime(progressCurrent));
+                song_progress.setProgress(progressCurrent);
+                mediaPlayer.seekTo(progressCurrent);
             } else
                 PreparePlay(path);
 
